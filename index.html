@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>weather app</title>
+    <link rel="stylesheet" href="weather.css">
+</head>
+
+<body>
+    <div class="weather-app">
+        <div class="heading"><h2>Bakir WebDev</h2></div>
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter city Name">
+            <button id="searchBtn">Search</button>
+        </div>
+        <div class="hero">
+            <p id="loading">loading weather</p>
+
+            <p id="error"></p>
+
+
+            <div id="weather">
+
+                <div class="city-name">
+                    <h3 id="city" class="city"> Karachi </h3>
+
+                    <div class="time-date">
+                        <p id="date" class="date"></p>
+                        <p id="time" class="time"></p>
+                    </div>
+                </div>
+
+                <div class="tempe-icon-cond">
+                    <div id="weatherIcon" class="weather-icon"></div>
+
+                    <div class="temp-cond">
+                        <div class="temperature" id="temperature">--°C</div>
+                        <div class="condition" id="condition">--</div>
+                    </div>
+
+                </div>
+                <div class="details">
+                    <div class="detail-box">
+                        <h3>Feels Like</h3>
+                        <p id="feelsLike">--°C</p>
+                    </div>
+                    <div class="detail-box">
+                        <h3>Humidity</h3>
+                        <p id="humidity">--%</p>
+                    </div>
+                    <div class="detail-box">
+                        <h3>wind Speed</h3>
+                        <p id="wind">--km/h</p>
+                    </div>
+                    <div class="detail-box">
+                        <h3>weather Code</h3>
+                        <p id="weatherCode">--</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        //get element;
+        let cityInput = document.querySelector("#cityInput");
+        let searchBtn = document.querySelector("#searchBtn");
+        let loading = document.querySelector("#loading");
+        let error = document.querySelector("#error");
+        let weather = document.querySelector("#weather");
+        let city = document.querySelector("#city");
+        let date = document.querySelector("#date");
+        let time = document.querySelector("#time");
+        let weatherIcon = document.querySelector("#weatherIcon");
+        let temperature = document.querySelector("#temperature");
+        let condition = document.querySelector("#condition");
+        let feelsLike = document.querySelector("#feelsLike");
+        let humidity = document.querySelector("#humidity");
+        let wind = document.querySelector("#wind");
+        let weatherCode = document.querySelector("#weatherCode")
+
+        //search button;
+
+        searchBtn.addEventListener("click", function () {
+            let cityName = cityInput.value.trim();
+            if (cityName === "") {
+                error.textContent = "please Enter a city Name";
+                weather.style.display = "none";
+                return;
+            }
+            //function call;
+            getWeather(cityName);
+        }
+        );
+
+        // click enter key;
+        cityInput.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                searchBtn.click();
+            }
+        });
+
+        //get weather api;
+
+        async function getWeather(cityName) {
+            try {
+                loading.style.display = "block";
+                error.textContent = "";
+                weather.style.display = "none";
+
+                // find city;
+
+                let geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`);
+
+                if (!geoResponse.ok) {
+                    throw new error(
+                        "unable to find city"
+                    );
+                }
+                // data convert to json;
+                let geoData = await geoResponse.json();
+
+                // check city;
+
+                if (!geoData.results || geoData.results.length === 0) {
+                    throw new Error(
+                        "city not fond"
+                    )
+                };
+
+                //get information;
+
+                let location = geoData.results[0];
+
+                let latitude = location.latitude;
+
+                let longitude = location.longitude;
+
+                let cityNameFromAPI = location.name;
+
+                // weather api;
+
+                let weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto`
+                );
+                if (!weatherResponse.ok) {
+                    throw new error(
+                        "unable to get weather data"
+                    );
+                }
+                // convert to json;
+
+                let weatherData = await weatherResponse.json();
+
+                //current 
+
+                let current = weatherData.current;
+
+                // display 
+
+                city.textContent = cityNameFromAPI;
+
+                temperature.textContent = `${current.temperature_2m}°C`;
+
+                feelsLike.textContent = `${current.apparent_temperature} °C`;
+
+                humidity.textContent = `${current.relative_humidity_2m}%`;
+
+                wind.textContent = `${current.wind_speed_10m}km/h`;
+
+                weatherCode.textContent = current.weather_code;
+
+                //weather condition;
+
+                let weatherInfo = getWeatherInfo(current.weather_code);
+
+                condition.textContent = weatherInfo.text;
+
+                weatherIcon.textContent = weatherInfo.icon;
+
+                //date ;
+
+                let now = new Date();
+
+                date.textContent = now.toDateString();
+
+                //time 
+                time.textContent = now.toLocaleTimeString();
+
+                // show weather;
+
+                weather.style.display = "block";
+            }
+            catch (err) {
+                error.textContent = err.message;
+
+                weather.style.display = "none";
+            }
+            finally {
+                loading.style.display = "none";
+            }
+        }
+
+        // weather code function;
+
+        function getWeatherInfo(code) {
+            if (code === 0) {
+                return {
+                    text: "clear sky",
+                    icon: "☀️",
+                };
+            }
+
+            if (code === 1 || code === 2 || code === 3) {
+                return {
+                    text: "partly cloud",
+                    icon: "⛅",
+                };
+            }
+
+            if (code === 45 || code === 48) {
+                return {
+                    text: "foggy",
+                    icon: "🌫️",
+                };
+            }
+            if (code >= 51 && code <= 67) {
+                return {
+                    text: "rain",
+                    icon: "🌧️",
+                };
+            }
+            if (code >= 71 && code <= 77) {
+                return {
+                    text: "snow",
+                    icon: "❄️"
+                };
+            }
+            if (code >= 80 && code <= 82) {
+                return {
+                    text: "Rain Shower",
+                    icon: "🌦️"
+                };
+            }
+            if (code >= 95) {
+                return {
+                    text: "thunderstorm",
+                    icon: "⛈️"
+                };
+            }
+            return {
+                text: "unknown",
+                icon: "🌤️"
+            };
+        }
+
+        //default city;
+
+        getWeather("Karachi");
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>
